@@ -102,6 +102,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         let options = {
           requiredFeatures: ['depth-sensing'],
+          depthSensing: {
+            usagePreference: ['cpu-optimized'],
+            dataFormatPreference: ['luminance-alpha'],
+          },
         };
 
         navigator.xr.requestSession('immersive-ar', options).then((session) => {
@@ -265,7 +269,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         const depth_width = depthData.width;
         const depth_height = depthData.height;
 
-        const norm_tex_from_norm_view = depthData.normTextureFromNormView.matrix;
+        const norm_tex_from_norm_view = depthData.normDepthBufferFromNormView.matrix;
         const norm_view_from_norm_tex = mat4.invert(mat4.create(), norm_tex_from_norm_view);
 
         const inverse_depth_dimensions = vec3.fromValues(1.0 / depth_width,
@@ -278,9 +282,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         const vertices_data = [];
 
+        // TODO would be better to directly iterate with normalized coords
         for(let x = 0; x < depth_width; x = x + RESOLUTION) {
           for(let y = 0; y < depth_height; y = y + RESOLUTION) {
-            const distance = depthData.getDepth(x, y);
+            //const distance = depthData.getDepth(x, y);
 
             const depth_coords = vec3.fromValues(x, y, 0);
 
@@ -288,6 +293,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             // 1. Normalize to [0, 1] range:
             const depth_coords_norm = scaleByVec(vec3.create(),
                                                  depth_coords, inverse_depth_dimensions);
+
+            const distance = depthData.getDepth(depth_coords_norm[0], depth_coords_norm[1]);
+
             // 2. Map from normalized texture coordinates to normalized view coordinates:
             const depth_coords_view_norm = vec3.transformMat4(vec3.create(),
                                                               depth_coords_norm,
